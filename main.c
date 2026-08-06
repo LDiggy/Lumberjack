@@ -35,12 +35,14 @@
 // RCC: USART2 clock enable
 #define APB1_USART2EN_POS 17
 
-// Define baud rate values, USART2 baud: 16 MHz / 115200 = 138.89
-// Mantissa 138
-#define BRR_MANTISSA 138
+// Define baud rate values
+// USART2 baud: BRR = PCLK1 / (16 x baud) x 16 ... simplified below
+// USARTDIV = 16,000,000 / (16 x 115200) = 8.68
+// Mantissa = 8 (integer part)
+#define BRR_MANTISSA 8
 #define BRR_MANTISSA_POS 4
-// Fraction 0.89*16 ≈ 14
-#define BRR_FRACTION 14
+// Fraction = 0.68 x 16 = 10.9 ≈ 11
+#define BRR_FRACTION 8
 
 // Bit positions to enable USART and Transmission
 #define USART2_EN_POS 13
@@ -86,8 +88,8 @@ int main(void) {
     // Kept this because a heartbeat is nice
     while(1){
         // Commented out the "Count to a million then invert the LED"
-        //GPIOA_ODR ^= (1 << LED_PIN);
-        //for (int i = 1; i <= 1000000; i++){};
+        // GPIOA_ODR ^= (1 << LED_PIN);
+        // for (int i = 1; i <= 1000000; i++){};
 
         // This loop's purpose is to get stuck here and do nothing until the write is ready,
         // and then it will exit once it is ready and let the line after this loop run.
@@ -96,6 +98,8 @@ int main(void) {
         }
 
         USART2_DR = 'U';
+
+        // while (!(USART2_SR & (1 << 6))){ }
         for (int i = 1; i <= 1000; i++){};
     }
 }
