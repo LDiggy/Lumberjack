@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include "stm32f411xe.h"
 
 // Declare the memory location as a 32 bit int, then add in the offset before setting it
 // Declare funcitons and positions of bitshifts

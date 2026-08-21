@@ -5,7 +5,7 @@ firmware.elf: main.o startup.o
 	arm-none-eabi-gcc -mcpu=cortex-m4 -mthumb -T STM32F411RETX_FLASH.ld --specs=nosys.specs main.o startup.o -o firmware.elf
 
 main.o: main.c
-	arm-none-eabi-gcc -mcpu=cortex-m4 -mthumb -g -O0 -Wall -c main.c -o main.o
+	arm-none-eabi-gcc -mcpu=cortex-m4 -mthumb -g -O0 -Wall -I./cmsis -c main.c -o main.o
 
 startup.o: startup_stm32f411xe.s
 	arm-none-eabi-gcc -mcpu=cortex-m4 -mthumb -g -O0 -Wall -c startup_stm32f411xe.s -o startup.o
