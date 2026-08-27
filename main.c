@@ -82,7 +82,7 @@ void USART2_IRQHandler(void) {
 }
 
 int main(void) {
-    // Enabled the clock for the LED
+    // Enabled the clock for GPIOA (enables USART2 and LED pins)
     RCC_AHB1ENR |= (1 << RCC_GPIOAEN_POS);
 
     // Set the mode for the LED pin (output)
@@ -124,38 +124,12 @@ int main(void) {
     // Enable USART interrupts in the NVIC
     NVIC->ISER[1] = (1 << USART2_ISER_POS);
 
-    // Have a generic storage container for the data I'm receiving and transmitting
-    //uint8_t storage_variable;
-
     
     // Loop indefinitely so main() doesn't exit
     // Kept the heartbeat code just in case
     while(1){
-        // Count to a million then invert the LED
+        // Heartbeat: Count to a million then invert the LED
         // GPIOA_ODR ^= (1 << LED_PIN);
         // for (int i = 1; i <= 1000000; i++){};
-
-        // ** NOTICE ** : This part might be unnecessary now. I'm leaving it in for
-        //      posterity; I won't delete it until I'm sure my alt method works
-
-        // Build an echo where I receive something, then transmit it back
-        /*if ( (USART2_SR & USART2_RXNE_POS_MASK) == USART2_RXNE_POS_MASK ){
-            storage_variable = USART2_DR;
-            while ((USART2_SR & USART2_TXE_POS_MASK) != USART2_TXE_POS_MASK) {
-            // do nothing
-            }
-            USART2_DR = storage_variable;
-        }*/
-
-
-        // This loop's purpose is to get stuck here and do nothing until the write is ready,
-        // and then it will exit once it is ready and let the line after this loop run.
-        // while ((USART2_SR & USART2_TXE_POS_MASK) != USART2_TXE_POS_MASK) {
-        //     // do nothing
-        // }
-        // USART2_DR = storage_variable;
-
-        // while (!(USART2_SR & (1 << 6))){ }
-        //for (int i = 1; i <= 1000; i++){};
     }
 }
