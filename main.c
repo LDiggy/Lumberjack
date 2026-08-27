@@ -23,7 +23,7 @@
 // RCC: GPIOA clock enable
 #define RCC_GPIOAEN_POS 0
 
-// PA5 — user LED
+// PA5 — User LED
 #define PA5_MODER_POS 10
 #define LED_PIN 5
 
@@ -58,13 +58,28 @@
 #define USART2_EN_POS 13
 #define USART2_TX_EN_POS 3
 #define USART2_RX_EN_POS 2
+#define USART2_RXNEIE_POS 5
 
 // Mask for the TXE bit (bit 7 in USART2_SR)
 #define USART2_TXE_POS_MASK 0x80
 // Mask for the RXNE bit (bit 5 in USART2_SR)
 #define USART2_RXNE_POS_MASK 0x10
 
+// Bit position of USART interrupt enable in ISER
+#define USART2_ISER_POS 6
+
 void SystemInit(void) {}
+
+// Handles the IRQ request for USART2
+void USART2_IRQHandler(void) {
+    // Have a generic storage container for the data I'm receiving and transmitting
+    uint8_t storage_variable;
+    // Check if the RXNE flag has been raised, if so echo back the data
+    if ( (USART2_SR & USART2_RXNE_POS_MASK) == USART2_RXNE_POS_MASK ) {
+        storage_variable = USART2_DR;
+        USART2_DR = storage_variable;
+    }
+}
 
 int main(void) {
     // Enabled the clock for the LED
@@ -103,11 +118,16 @@ int main(void) {
     //       the register combined, the last 4 bits being the fraction
     USART2_BRR = ((BRR_MANTISSA << BRR_MANTISSA_POS) | BRR_FRACTION);
 
-    // Set control register to enable USART, USART_TX, and USART_RX
-    USART2_CR1 |= ((1 << USART2_EN_POS) | (1 << USART2_TX_EN_POS) | (1 << USART2_RX_EN_POS));
+    // Set control register to enable USART, USART_TX, USART_RX, and USART_RXNEIE
+    USART2_CR1 |= ((1 << USART2_EN_POS) | (1 << USART2_TX_EN_POS) | (1 << USART2_RX_EN_POS) | (1 << USART2_RXNEIE_POS));
+
+    // Enable USART interrupts in the NVIC
+    NVIC->ISER[1] = (1 << USART2_ISER_POS);
 
     // Have a generic storage container for the data I'm receiving and transmitting
-    uint8_t storage_variable;
+    //uint8_t storage_variable;
+
+    
     // Loop indefinitely so main() doesn't exit
     // Kept the heartbeat code just in case
     while(1){
@@ -115,14 +135,17 @@ int main(void) {
         // GPIOA_ODR ^= (1 << LED_PIN);
         // for (int i = 1; i <= 1000000; i++){};
 
+        // ** NOTICE ** : This part might be unnecessary now. I'm leaving it in for
+        //      posterity; I won't delete it until I'm sure my alt method works
+
         // Build an echo where I receive something, then transmit it back
-        if ( (USART2_SR & USART2_RXNE_POS_MASK) == USART2_RXNE_POS_MASK ){
+        /*if ( (USART2_SR & USART2_RXNE_POS_MASK) == USART2_RXNE_POS_MASK ){
             storage_variable = USART2_DR;
             while ((USART2_SR & USART2_TXE_POS_MASK) != USART2_TXE_POS_MASK) {
             // do nothing
             }
             USART2_DR = storage_variable;
-        }
+        }*/
 
 
         // This loop's purpose is to get stuck here and do nothing until the write is ready,
@@ -133,6 +156,6 @@ int main(void) {
         // USART2_DR = storage_variable;
 
         // while (!(USART2_SR & (1 << 6))){ }
-        for (int i = 1; i <= 1000; i++){};
+        //for (int i = 1; i <= 1000; i++){};
     }
 }
