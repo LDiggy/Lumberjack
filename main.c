@@ -58,26 +58,53 @@
 #define USART2_EN_POS 13
 #define USART2_TX_EN_POS 3
 #define USART2_RX_EN_POS 2
-#define USART2_RXNEIE_POS 5
 
 // Mask for the TXE bit (bit 7 in USART2_SR)
 #define USART2_TXE_POS_MASK 0x80
 // Mask for the RXNE bit (bit 5 in USART2_SR)
-#define USART2_RXNE_POS_MASK 0x10
+#define USART2_RXNE_POS_MASK 0x20
+
+// Bit positions for RXNEIE and ORE interrupts
+#define USART2_RXNEIE_POS 5
+#define USART2_ORE_POS 3
+
+// Masks for RXNEIE and ORE bits (trying new convention instead of raw number)
+#define USART2_RXNEIE_POS_MASK (1 << USART2_RXNEIE_POS)
+#define USART2_ORE_POS_MASK (1 << USART2_ORE_POS)
 
 // Bit position of USART interrupt enable in ISER
 #define USART2_ISER_POS 6
+
+// Set the buffer size used for the ring buffer
+#define BUFFER_SIZE 64
+
+// These will be my global variables
+
+// All of my buffer items are volatile so the compiler knows to read them
+//    every time, not optimize reading them from a cpu cache
+// Set up ring buffer
+volatile uint8_t ring_buffer[BUFFER_SIZE];
+// Set head and tail to zero
+volatile uint8_t head = 0;
+volatile uint8_t tail = 0;
 
 void SystemInit(void) {}
 
 // Handles the IRQ request for USART2
 void USART2_IRQHandler(void) {
-    // Have a generic storage container for the data I'm receiving and transmitting
-    uint8_t storage_variable;
-    // Check if the RXNE flag has been raised, if so echo back the data
-    if ( (USART2_SR & USART2_RXNE_POS_MASK) == USART2_RXNE_POS_MASK ) {
-        storage_variable = USART2_DR;
-        USART2_DR = storage_variable;
+    // Check if the RXNE flag has been raised, if so put the data in the buffer
+    if ( ( USART2_SR & USART2_RXNE_POS_MASK ) == USART2_RXNE_POS_MASK ) {
+        // Initial DR read to clear the ORE flag if it's been raised
+        uint8_t data_register = USART2_DR;
+        // This used to be in the conditional, but I made it a variable so it doesn't need
+        //    to be recomputed...also if I change it I change one spot, not multiple. Also
+        //    it's way more readable in all places
+        uint8_t next_head = ( head + 1 ) % BUFFER_SIZE;
+        // This bit drops the next byte if the buffer is 1 away from being full
+        if ( next_head != tail ) {
+            ring_buffer[head] = data_register;
+            head = next_head;
+        }
     }
 }
 
@@ -121,13 +148,23 @@ int main(void) {
     // Set control register to enable USART, USART_TX, USART_RX, and USART_RXNEIE
     USART2_CR1 |= ((1 << USART2_EN_POS) | (1 << USART2_TX_EN_POS) | (1 << USART2_RX_EN_POS) | (1 << USART2_RXNEIE_POS));
 
-    // Enable USART interrupts in the NVIC
+    // Enable USART interrupts in the NVIC (Nested Vectored Interrupt Controller)
     NVIC->ISER[1] = (1 << USART2_ISER_POS);
 
-    
     // Loop indefinitely so main() doesn't exit
     // Kept the heartbeat code just in case
     while(1){
+        // If nothing in the buffer, wait
+        while ( head == tail ) {}
+        // If transmission not ready, wait
+        while ( ( USART2_SR & USART2_TXE_POS_MASK ) != USART2_TXE_POS_MASK ) {}
+        // Store data
+        USART2_DR = ring_buffer[tail];
+        // This basically says "add 1 to the tail, divide by the buffer size, leave the remainder"
+        //    i.e. if the remainder is 0, it loops back to zero because it got to the end of the buffer
+        tail = ( tail + 1 ) % BUFFER_SIZE;
+        
+
         // Heartbeat: Count to a million then invert the LED
         // GPIOA_ODR ^= (1 << LED_PIN);
         // for (int i = 1; i <= 1000000; i++){};
