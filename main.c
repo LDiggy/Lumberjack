@@ -108,7 +108,8 @@ void USART2_IRQHandler(void) {
     }
 }
 
-int main(void) {
+// Initializes USART2
+void usart2_init(void) {
     // Enabled the clock for GPIOA (enables USART2 and LED pins)
     RCC_AHB1ENR |= (1 << RCC_GPIOAEN_POS);
 
@@ -150,6 +151,11 @@ int main(void) {
 
     // Enable USART interrupts in the NVIC (Nested Vectored Interrupt Controller)
     NVIC->ISER[1] = (1 << USART2_ISER_POS);
+}
+
+int main(void) {
+    // Initialize USART2 with all of the register writes in the function above
+    usart2_init();
 
     // Loop indefinitely so main() doesn't exit
     // Kept the heartbeat code just in case
