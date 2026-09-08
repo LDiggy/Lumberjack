@@ -88,14 +88,19 @@ volatile uint8_t ring_buffer[BUFFER_SIZE];
 volatile uint8_t head = 0;
 volatile uint8_t tail = 0;
 
+
 void SystemInit(void) {}
 
 // Handles the IRQ request for USART2
 void USART2_IRQHandler(void) {
+    // Read SR and DR unconditionally to clear flags that might hang ISR
+    uint32_t status_register = USART2_SR;
+    uint8_t data_register = USART2_DR;
     // Check if the RXNE flag has been raised, if so put the data in the buffer
-    if ( ( USART2_SR & USART2_RXNE_POS_MASK ) == USART2_RXNE_POS_MASK ) {
-        // Initial DR read to clear the ORE flag if it's been raised
-        uint8_t data_register = USART2_DR;
+    if ( ( status_register & USART2_RXNE_POS_MASK ) == USART2_RXNE_POS_MASK ) {
+        // // Initial DR read to clear the ORE flag if it's been raised
+        // uint8_t data_register = USART2_DR;
+
         // This used to be in the conditional, but I made it a variable so it doesn't need
         //    to be recomputed...also if I change it I change one spot, not multiple. Also
         //    it's way more readable in all places
